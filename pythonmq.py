@@ -7,8 +7,8 @@ class pythonmq:
         self.force = force
         self.debug = False
     
-    def enabledebug(self):
-        self.debug = True
+    def enabledebug(self, param=True):
+        self.debug = param
 
     def createnewqueue(self):
         queuename = self.queuename
@@ -45,11 +45,15 @@ class pythonmq:
             else:
                 raise Exception("Unable to connect to queue.")
 
-    def broadcastmessage(self, message):
+    def broadcastmessage(self, *message):
         try:
-            self.c.execute("""
-            INSERT INTO messages(message) VALUES(?)
-            """, (message,))
+            sql = "INSERT INTO messages(message) VALUES"
+            for i in range(len(message)):
+                if message[i] not in ("", None):
+                    sql = sql+"('{}')".format(message[i])
+                if i+1 != len(message):
+                    sql = sql+","
+            self.c.execute(sql)
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -80,19 +84,46 @@ class pythonmq:
             else:
                 raise Exception("Failed to fetch messages.")
 
-    def popmessage(self, last=False):
+    def popmessage(self, last=True):
         try:
             if last is True:
                 self.c = self.conn.cursor()
                 self.c.execute("SELECT count(*) from messages")
                 numberofrows = int(self.c.fetchone()[0])
                 self.c.execute("DELETE FROM messages WHERE rowid = {}".format(numberofrows))
-                self.c.execute("VACUUM")
             else:
                 self.c.execute("DELETE FROM messages WHERE rowid = {}".format(1))
-                self.c.execute("VACUUM")
         except Exception as e:
             if self.debug is True:
                 print(str(e))
             else:
                 raise Exception("unable to pop message from the queue.")
+        finally:
+            self.c.execute("VACUUM")
+
+    def removemessagebyid(self, messageid):
+        try:
+            self.c = self.conn.cursor()
+            if type(messageid) is int:
+                self.c.execute("DELETE FROM messages WHERE rowid = {}".format(messageid))
+            elif type(messageid) is tuple:
+                self.c.execute("DELETE FROM messages WHERE rowid in {}".format(messageid))
+            else:
+                raise Exception("messageid argument must be of int type.")
+        except Exception as e:
+            if self.debug is True:
+                print(str(e))
+            else:
+                raise Exception("Could not remove specified message from queue.")
+        finally:
+            self.c.execute("VACUUM")
+    
+    def closequeue(self):
+        try:
+            self.conn.close()
+            os.remove(os.environ['TMPDIR']+self.queuename)
+        except Exception as e:
+            if self.debug is True:
+                print(str(e))
+            else:
+                raise Exception("Could not close queue.")
