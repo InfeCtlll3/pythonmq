@@ -55,4 +55,4 @@ output:
 ```shell
 [(1, 'message1'),(2, 'message3')]
 ```
-- Note that the order of the messages are rearranges. Now the message3 is now the 2nd message
+- Note that the order of the messages are rearranged. Now the message3 is now the 2nd message
