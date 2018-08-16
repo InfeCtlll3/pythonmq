@@ -1,15 +1,20 @@
 import os
 import sqlite3
 
-class pythonmq:
+class pythonmq(object):
     def __init__(self, queuename: str, force=False):
         self.queuename = queuename
         self.force = force
         self.debug = False
-    
-    def enabledebug(self, param=True):
-        self.debug = param
 
+    @property
+    def enabledebug(self):
+        return self.debug
+
+    @enabledebug.setter
+    def enabledebug(self, param):
+        self.debug = param
+    
     def createnewqueue(self):
         queuename = self.queuename
         force  = self.force
