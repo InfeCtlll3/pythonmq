@@ -13,14 +13,17 @@ class pythonmq(object):
 
     @enabledebug.setter
     def enabledebug(self, param):
-        self.debug = param
+        if type(param) != bool:
+            raise TypeError("Type of the param parsed is not supported. You must parse either True or False")
+        else:
+            self.debug = param
     
     def createnewqueue(self):
         queuename = self.queuename
         force  = self.force
         try:
             if os.path.isfile(os.environ['TMPDIR']+queuename) is True and force is False:
-                raise Exception("Queue already exists. please use the command pythonmq(queuename, force=True) in order to force this queue to be created.")
+                raise IOError("Queue already exists. please use the command pythonmq(queuename, force=True) in order to force this queue to be created.")
             elif os.path.isfile(os.environ['TMPDIR']+queuename) is True and force is True:
                 os.remove(os.environ['TMPDIR']+queuename)
             self.conn = sqlite3.connect(os.environ['TMPDIR']+queuename, isolation_level=None)
@@ -42,8 +45,9 @@ class pythonmq(object):
             if os.path.isfile(os.environ['TMPDIR']+queuename) is True:
                 self.conn = sqlite3.connect(os.environ['TMPDIR']+queuename, isolation_level=None)
                 self.c = self.conn.cursor()
+                return True
             else:
-                raise Exception("Queue does not exist.")
+                raise IOError("Queue does not exist.")
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -126,7 +130,8 @@ class pythonmq(object):
     def closequeue(self):
         try:
             self.conn.close()
-            os.remove(os.environ['TMPDIR']+self.queuename)
+            if os.path.isfile(os.environ['TMPDIR']+self.queuename) is True:
+                os.remove(os.environ['TMPDIR']+self.queuename)
         except Exception as e:
             if self.debug is True:
                 print(str(e))
