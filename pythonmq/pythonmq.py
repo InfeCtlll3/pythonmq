@@ -47,7 +47,7 @@ class pythonmq(object):
                 self.c = self.conn.cursor()
                 return True
             else:
-                raise IOError("Queue does not exist.")
+                raise Exception("Queue does not exist.")
         except Exception as e:
             if self.debug is True:
                 print(str(e))
