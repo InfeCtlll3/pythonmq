@@ -2,3 +2,7 @@
 *.pyc
 
 \.vscode/
+
+\.DS_Store
+
+releases/
