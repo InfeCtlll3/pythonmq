@@ -48,7 +48,7 @@ class pythonmq(object):
         finally:
             self.conn.commit()
 
-    def publish(self, *message):
+    def publish(self, *message, ack=False):
         try:
             sql = "INSERT INTO messages(message) VALUES"
             for i in range(len(message)):
@@ -57,6 +57,8 @@ class pythonmq(object):
                 if i+1 != len(message):
                     sql = sql+","
             self.c.execute(sql)
+            if ack:
+                to_return = self.c.lastrowid
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -64,6 +66,8 @@ class pythonmq(object):
                 raise Exception("Failed to parse message to broadcaster.")
         finally:
             self.conn.commit()
+            if ack:
+                return to_return
     
     def display(self, id=None, with_id=False):
         try:
