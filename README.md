@@ -28,7 +28,7 @@ pip3 install pythonmq-1.0.0.tar.gz
 Basically native libs of python 3
 
 ## Class Methods
-- **__init__(queuename, force=False, tmp_arg=None)** constructor method. Used to parse queue's name to the class and set variables. The argument force is used when a queue db file with the same name already exists. In this type of case, just parse the arg "force=True" when instancing the class. The argument tmp_arg is used to specify the folder where the database will be created. In case it's not parsed, it will try to fetch the TMPDIR variable from your system or just simply use /tmp/.
+- **__init__(queuename, force=False, tmp_arg=None)** constructor method. Used to parse queue's name to the class and set variables. The argument force is used when you need to be sure that the message queue will be empty when you create it (cleanup if there is any old database with same name). The argument tmp_arg is used to specify the folder where the database will be created. In case it's not parsed, it will try to fetch the TMPDIR variable from your system or just simply use /tmp/.
 - **enabledebug = Param** Function used to change debuging mode (in case you call this method, it will print any and all exceptions to the terminal). In case you wish to disable debug just set the variable **enabledebug = False**. Keep in mind that this function is set to be a property function, so it behaves like a variable.
 - **join()** Joins the queue you parsed to the constructor method when invoking the class. In case the queue does not exist it will create it. You can parse **force=True** in the constructor method so force a new queue to always be created (cleanup).
 - **publish(message)** Send the message you wish to the database (queue you created), so all clients can access it. you can parse a single message, or multiple messages. Ex.: publish("message1") or publish("message2, "message3")
@@ -57,7 +57,7 @@ queue.display()
 ```
 output:
 ```shell
-[(1, 'message2'), (2, 'message3'), (3, 'message4')]
+['message2', 'message3', 'message4']
 ```
 ```python
 queue.remove_by_id(2)
@@ -65,7 +65,7 @@ queue.display()
 ```
 output:
 ```shell
-[(1, 'message2'),(2, 'message4')]
+['message2', 'message4']
 ```
 - Note that the order of the messages are rearranged. Now the message4 is the 2nd message in the queue at the moment.
 
