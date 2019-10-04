@@ -53,6 +53,7 @@ output:
 ```
 ```python
 queue.pop()
+message1
 queue.display()
 ```
 output:
