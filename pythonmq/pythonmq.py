@@ -26,42 +26,29 @@ class pythonmq(object):
         else:
             self.debug = param
     
-    def createnewqueue(self):
-        queuename = self.queuename
-        force  = self.force
-        try:
-            if os.path.isfile(self.tmp_dir+queuename) is True and force is False:
-                raise IOError("Queue already exists. please use the command pythonmq(queuename, force=True) in order to force this queue to be created.")
-            elif os.path.isfile(self.tmp_dir+queuename) is True and force is True:
-                os.remove(self.tmp_dir+queuename)
-            self.conn = sqlite3.connect(self.tmp_dir+queuename, isolation_level=None)
-            self.c = self.conn.cursor()
-            self.c.execute("""
-            CREATE TABLE messages (message TEXT)
-            """)
-        except Exception as e:
-            if self.debug is True:
-                print(str(e))
-            else:
-                raise Exception("Failed to Create table.")
-        finally:
-            self.conn.commit()
-            self.joinqueue()
-
     def joinqueue(self):
         queuename = self.queuename
+        force = self.force
+        db_exists = os.path.isfile(self.tmp_dir+queuename)
         try:
-            if os.path.isfile(self.tmp_dir+queuename) is True:
+            if db_exists is False and force is False:
+                raise IOError("Queue does not exists. make sure the queue already exists when trying to connect. If you wish to create the queue, parse the arg force=True")            
+            if db_exists is True:
+                if force is True: #cleanup
+                    os.remove(self.tmp_dir+queuename)
                 self.conn = sqlite3.connect(self.tmp_dir+queuename, isolation_level=None)
                 self.c = self.conn.cursor()
-                return True
-            else:
-                raise Exception("Queue does not exist.")
+                if force is True:
+                    self.c.execute("""
+                    CREATE TABLE messages (message TEXT)
+                    """)
         except Exception as e:
             if self.debug is True:
                 print(str(e))
             else:
-                raise Exception("Unable to connect to queue.")
+                raise Exception("Failed to Create queue.")
+        finally:
+            self.conn.commit()
 
     def broadcastmessage(self, *message):
         try:
