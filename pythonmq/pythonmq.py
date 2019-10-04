@@ -2,10 +2,18 @@ import os
 import sqlite3
 
 class pythonmq(object):
-    def __init__(self, queuename: str, force=False):
+    def __init__(self, queuename: str, force=False, tmp_arg=None):
         self.queuename = queuename
         self.force = force
         self.debug = False
+        self.tmp_dir = ''
+        if tmp_arg is None:
+            try:
+                self.tmp_dir = os.environ['TMPDIR']
+            except KeyError:
+                self.tmp_dir = '/tmp/'
+        else:
+            self.tmp_dir = tmp_arg
 
     @property
     def enabledebug(self):
@@ -22,11 +30,11 @@ class pythonmq(object):
         queuename = self.queuename
         force  = self.force
         try:
-            if os.path.isfile(os.environ['TMPDIR']+queuename) is True and force is False:
+            if os.path.isfile(self.tmp_dir+queuename) is True and force is False:
                 raise IOError("Queue already exists. please use the command pythonmq(queuename, force=True) in order to force this queue to be created.")
-            elif os.path.isfile(os.environ['TMPDIR']+queuename) is True and force is True:
-                os.remove(os.environ['TMPDIR']+queuename)
-            self.conn = sqlite3.connect(os.environ['TMPDIR']+queuename, isolation_level=None)
+            elif os.path.isfile(self.tmp_dir+queuename) is True and force is True:
+                os.remove(self.tmp_dir+queuename)
+            self.conn = sqlite3.connect(self.tmp_dir+queuename, isolation_level=None)
             self.c = self.conn.cursor()
             self.c.execute("""
             CREATE TABLE messages (message TEXT)
@@ -38,12 +46,13 @@ class pythonmq(object):
                 raise Exception("Failed to Create table.")
         finally:
             self.conn.commit()
+            self.joinqueue()
 
     def joinqueue(self):
         queuename = self.queuename
         try:
-            if os.path.isfile(os.environ['TMPDIR']+queuename) is True:
-                self.conn = sqlite3.connect(os.environ['TMPDIR']+queuename, isolation_level=None)
+            if os.path.isfile(self.tmp_dir+queuename) is True:
+                self.conn = sqlite3.connect(self.tmp_dir+queuename, isolation_level=None)
                 self.c = self.conn.cursor()
                 return True
             else:
@@ -71,13 +80,14 @@ class pythonmq(object):
         finally:
             self.conn.commit()
     
-    def displaymessages(self, id=None):
+    def displaymessages(self, id=None, with_id=False):
         try:
             self.c = self.conn.cursor()
             if id is None:
                 self.c.execute("""
                 SELECT rowid as id,message FROM messages ORDER BY rowid ASC
                 """)
+                result = self.c.fetchall()
             else:
                 if type(id) is int:
                     self.c.execute("""
@@ -86,22 +96,26 @@ class pythonmq(object):
                 elif type(id) is tuple:
                     id = "SELECT rowid as id,message FROM messages WHERE rowid IN {} ORDER BY rowid ASC".format(id)
                     self.c.execute(id)
-            return self.c.fetchall()
+                    result = self.c.fetchall()
         except Exception as e:
             if self.debug is True:
                 print(str(e))
             else:
                 raise Exception("Failed to fetch messages.")
-
-    def popmessage(self, last=True):
-        try:
-            if last is True:
-                self.c = self.conn.cursor()
-                self.c.execute("SELECT count(*) from messages")
-                numberofrows = int(self.c.fetchone()[0])
-                self.c.execute("DELETE FROM messages WHERE rowid = {}".format(numberofrows))
+        finally:
+            if with_id is True:
+                return result
             else:
-                self.c.execute("DELETE FROM messages WHERE rowid = {}".format(1))
+                return [v[1] for v in result]
+
+    def popmessage(self, with_id=False):
+        try:
+            self.c = self.conn.cursor()
+            self.c.execute("""
+                    SELECT rowid as id,message FROM messages WHERE rowid={}
+                    """.format(1))
+            result = self.c.fetchone()
+            self.c.execute("DELETE FROM messages WHERE rowid = {}".format(1))
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -109,6 +123,10 @@ class pythonmq(object):
                 raise Exception("unable to pop message from the queue.")
         finally:
             self.c.execute("VACUUM")
+            if with_id is True:
+                return result
+            else:
+                return result[1]
 
     def removemessagebyid(self, messageid):
         try:
@@ -130,8 +148,8 @@ class pythonmq(object):
     def closequeue(self):
         try:
             self.conn.close()
-            if os.path.isfile(os.environ['TMPDIR']+self.queuename) is True:
-                os.remove(os.environ['TMPDIR']+self.queuename)
+            if os.path.isfile(self.tmp_dir+self.queuename) is True:
+                os.remove(self.tmp_dir+self.queuename)
         except Exception as e:
             if self.debug is True:
                 print(str(e))
