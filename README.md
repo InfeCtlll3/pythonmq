@@ -44,7 +44,7 @@ queue = pythonmq("myownqueue", force=True)
 queue.enabledebug = True
 queue.join()
 queue.publish("message1")
-queue.broadcastmessage("message2", "message3", "message4")
+queue.publish("message2", "message3", "message4")
 queue.display(with_id=True)
 ```
 output:
