@@ -52,14 +52,22 @@ output:
 [(1, 'message1'), (2, 'message2'), (3, 'message3'), (4, 'message4')]
 ```
 ```python
-queue.pop()
-message1
+message = queue.pop()
 queue.display()
 ```
 output:
 ```shell
 ['message2', 'message3', 'message4']
 ```
+```python
+print(message)
+```
+
+output:
+```shell
+message1
+```
+
 ```python
 queue.remove_by_id(2)
 queue.display()
