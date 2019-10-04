@@ -26,22 +26,20 @@ class pythonmq(object):
         else:
             self.debug = param
     
-    def joinqueue(self):
+    def join(self):
         queuename = self.queuename
         force = self.force
         db_exists = os.path.isfile(self.tmp_dir+queuename)
         try:
-            if db_exists is False and force is False:
-                raise IOError("Queue does not exists. make sure the queue already exists when trying to connect. If you wish to create the queue, parse the arg force=True")            
-            if db_exists is True:
-                if force is True: #cleanup
-                    os.remove(self.tmp_dir+queuename)
-                self.conn = sqlite3.connect(self.tmp_dir+queuename, isolation_level=None)
-                self.c = self.conn.cursor()
-                if force is True:
-                    self.c.execute("""
-                    CREATE TABLE messages (message TEXT)
-                    """)
+            if force is True and db_exists:
+                os.remove(self.tmp_dir+queuename)
+                db_exists = False
+            self.conn = sqlite3.connect(self.tmp_dir+queuename, isolation_level=None)
+            self.c = self.conn.cursor()
+            if db_exists is False:
+                self.c.execute("""
+                CREATE TABLE messages (message TEXT)
+                """)
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -50,7 +48,7 @@ class pythonmq(object):
         finally:
             self.conn.commit()
 
-    def broadcastmessage(self, *message):
+    def publish(self, *message):
         try:
             sql = "INSERT INTO messages(message) VALUES"
             for i in range(len(message)):
@@ -67,7 +65,7 @@ class pythonmq(object):
         finally:
             self.conn.commit()
     
-    def displaymessages(self, id=None, with_id=False):
+    def display(self, id=None, with_id=False):
         try:
             self.c = self.conn.cursor()
             if id is None:
@@ -95,7 +93,7 @@ class pythonmq(object):
             else:
                 return [v[1] for v in result]
 
-    def popmessage(self, with_id=False):
+    def pop(self, with_id=False):
         try:
             self.c = self.conn.cursor()
             self.c.execute("""
@@ -115,7 +113,7 @@ class pythonmq(object):
             else:
                 return result[1]
 
-    def removemessagebyid(self, messageid):
+    def remove_by_id(self, messageid):
         try:
             self.c = self.conn.cursor()
             if type(messageid) is int:
@@ -132,7 +130,7 @@ class pythonmq(object):
         finally:
             self.c.execute("VACUUM")
     
-    def closequeue(self):
+    def close(self):
         try:
             self.conn.close()
             if os.path.isfile(self.tmp_dir+self.queuename) is True:
