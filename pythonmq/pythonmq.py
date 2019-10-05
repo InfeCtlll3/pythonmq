@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import uuid
 
 class pythonmq(object):
     def __init__(self, queuename: str, force=False, tmp_arg=None):
@@ -38,7 +39,7 @@ class pythonmq(object):
             self.c = self.conn.cursor()
             if db_exists is False:
                 self.c.execute("""
-                CREATE TABLE messages (message TEXT)
+                CREATE TABLE messages (message TEXT, uuid TEXT)
                 """)
         except Exception as e:
             if self.debug is True:
@@ -48,17 +49,19 @@ class pythonmq(object):
         finally:
             self.conn.commit()
 
-    def publish(self, *message, ack=False):
+    def publish(self, *message, ack=True):
         try:
-            sql = "INSERT INTO messages(message) VALUES"
+            sql = "INSERT INTO messages(message, uuid) VALUES"
+            ack_flag = str(uuid.uuid4())
+            to_return = ''
             for i in range(len(message)):
                 if message[i] not in ("", None):
-                    sql = sql+"('{}')".format(message[i])
+                    sql = sql+"('{}'".format(message[i]) +  ", '{}')".format(ack_flag)
                 if i+1 != len(message):
                     sql = sql+","
             self.c.execute(sql)
             if ack:
-                to_return = self.c.lastrowid
+                to_return = ack_flag
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -74,16 +77,16 @@ class pythonmq(object):
             self.c = self.conn.cursor()
             if id is None:
                 self.c.execute("""
-                SELECT rowid as id,message FROM messages ORDER BY rowid ASC
+                SELECT rowid as id,message,uuid FROM messages ORDER BY rowid ASC
                 """)
                 result = self.c.fetchall()
             else:
                 if type(id) is int:
                     self.c.execute("""
-                    SELECT rowid as id,message FROM messages WHERE rowid=? ORDER BY rowid ASC
+                    SELECT rowid as id,message,uuid FROM messages WHERE rowid=? ORDER BY rowid ASC
                     """, (id,))
                 elif type(id) is tuple:
-                    id = "SELECT rowid as id,message FROM messages WHERE rowid IN {} ORDER BY rowid ASC".format(id)
+                    id = "SELECT rowid as id,message,uuid FROM messages WHERE rowid IN {} ORDER BY rowid ASC".format(id)
                     self.c.execute(id)
                     result = self.c.fetchall()
         except Exception as e:
@@ -101,7 +104,7 @@ class pythonmq(object):
         try:
             self.c = self.conn.cursor()
             self.c.execute("""
-                    SELECT rowid as id,message FROM messages WHERE rowid={}
+                    SELECT rowid as id,message,uuid FROM messages WHERE rowid={}
                     """.format(1))
             result = self.c.fetchone()
             self.c.execute("DELETE FROM messages WHERE rowid = {}".format(1))
@@ -117,13 +120,13 @@ class pythonmq(object):
             else:
                 return result[1]
 
-    def remove_by_id(self, messageid):
+    def remove_by_token(self, token):
         try:
             self.c = self.conn.cursor()
             if type(messageid) is int:
-                self.c.execute("DELETE FROM messages WHERE rowid = {}".format(messageid))
+                self.c.execute("DELETE FROM messages WHERE uuid = {}".format(token))
             elif type(messageid) is tuple:
-                self.c.execute("DELETE FROM messages WHERE rowid in {}".format(messageid))
+                self.c.execute("DELETE FROM messages WHERE uuid in {}".format(token))
             else:
                 raise Exception("messageid argument must be of int type.")
         except Exception as e:
