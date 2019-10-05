@@ -75,6 +75,7 @@ class pythonmq(object):
     def display(self, id=None, with_id=False):
         try:
             self.c = self.conn.cursor()
+            result = ''
             if id is None:
                 self.c.execute("""
                 SELECT rowid as id,message,uuid FROM messages ORDER BY rowid ASC
@@ -83,12 +84,12 @@ class pythonmq(object):
             else:
                 if type(id) is int:
                     self.c.execute("""
-                    SELECT rowid as id,message,uuid FROM messages WHERE rowid=? ORDER BY rowid ASC
+                    SELECT rowid as id,message,uuid FROM messages WHERE uuid=? ORDER BY rowid ASC
                     """, (id,))
                 elif type(id) is tuple:
-                    id = "SELECT rowid as id,message,uuid FROM messages WHERE rowid IN {} ORDER BY rowid ASC".format(id)
+                    id = "SELECT rowid as id,message,uuid FROM messages WHERE uuid IN {} ORDER BY rowid ASC".format(id)
                     self.c.execute(id)
-                    result = self.c.fetchall()
+                result = self.c.fetchall()
         except Exception as e:
             if self.debug is True:
                 print(str(e))
@@ -123,12 +124,12 @@ class pythonmq(object):
     def remove_by_token(self, token):
         try:
             self.c = self.conn.cursor()
-            if type(messageid) is int:
+            if type(token) is str:
                 self.c.execute("DELETE FROM messages WHERE uuid = {}".format(token))
-            elif type(messageid) is tuple:
+            elif type(token) is tuple:
                 self.c.execute("DELETE FROM messages WHERE uuid in {}".format(token))
             else:
-                raise Exception("messageid argument must be of int type.")
+                raise Exception("token argument must be of str type.")
         except Exception as e:
             if self.debug is True:
                 print(str(e))
