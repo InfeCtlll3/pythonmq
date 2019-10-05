@@ -49,10 +49,10 @@ class pythonmq(object):
         finally:
             self.conn.commit()
 
-    def publish(self, *message, ack=True):
+    def publish(self, *message, ack=True, uid=None):
         try:
             sql = "INSERT INTO messages(message, uuid) VALUES"
-            ack_flag = str(uuid.uuid4())
+            ack_flag = uid if uid is not none else str(uuid.uuid4())
             to_return = ''
             for i in range(len(message)):
                 if message[i] not in ("", None):
