@@ -52,7 +52,7 @@ class pythonmq(object):
     def publish(self, *message, ack=True, uid=None):
         try:
             sql = "INSERT INTO messages(message, uuid) VALUES"
-            ack_flag = uid if uid is not none else str(uuid.uuid4())
+            ack_flag = uid if uid is not None else str(uuid.uuid4())
             to_return = ''
             for i in range(len(message)):
                 if message[i] not in ("", None):
